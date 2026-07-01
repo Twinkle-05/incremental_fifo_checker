@@ -1,0 +1,14 @@
+Complete the missing RTL implementation for the Incremental FIFO Checker design.
+
+The modules fifo_top and fifo_sync are complete and should not be modified. Implement only the missing logic in the generator and pattern_checker modules.
+
+Requirements:
+- Generate an 8-bit circular incremental pattern with a parameterizable maximum value.
+- Pack eight consecutive 8-bit values into one 64-bit FIFO word.
+- The generator shall write data only when enable is asserted and FIFO almost_full is deasserted.
+- The pattern_checker shall read data when the FIFO is not empty.
+- The pattern_checker shall independently regenerate the expected pattern using only FIFO output timing.
+- No direct signal shall be passed from the generator to the pattern_checker.
+- The output `out` shall indicate whether the FIFO output matches the expected pattern.
+- Preserve all module interfaces.
+- Use synthesizable Verilog only.
