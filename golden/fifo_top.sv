@@ -1,14 +1,18 @@
 `timescale 1us/1us
 
 module fifo_top (
-    input  wire clk,
-    input  wire rst,
-    input  wire en,
+    input  wire        clk,
+    input  wire        rst,
+    input  wire        en,
 
-    output wire out
+    input  wire        load_seed,
+    input  wire [7:0]  seed,
+
+    output wire        out,
+    output wire        error_flag,
+    output wire [15:0] error_count
 );
 
-    // Internal signals
     wire [63:0] din;
     wire [63:0] dout;
     wire [63:0] dcheck;
@@ -24,13 +28,17 @@ module fifo_top (
     assign checker_empty = empty | !en;
 
     //=========================================================
-    // Incremental Data Generator
+    // LFSR Byte-by-Byte Data Generator
     //=========================================================
     generator generator_inst (
         .clk         (clk),
-        .en          (en),
         .rst         (rst),
-        .almost_full (full),
+        .en          (en),
+        .almost_full (almost_full),
+
+        .load_seed   (load_seed),
+        .seed        (seed),
+
         .wr          (wr),
         .din         (din)
     );
@@ -42,8 +50,9 @@ module fifo_top (
         .clk_i          (clk),
         .rst_i          (rst),
         .wr_en_i        (wr),
-        .rd_en_i        (!checker_empty),
+        .rd_en_i        (rd),
         .wr_data_i      (din),
+
         .full_o         (full),
         .empty_o        (empty),
         .almost_full_o  (almost_full),
@@ -51,16 +60,22 @@ module fifo_top (
     );
 
     //=========================================================
-    // Incremental Data Checker
+    // Independent LFSR Pattern Checker
     //=========================================================
     pattern_checker checker_inst (
-        .clk        (clk),
-        .rst        (rst),
-        .full_empty (checker_empty),
-        .dout       (dout),
-        .rd         (rd),
-        .out        (out),
-        .dcheck     (dcheck)
+        .clk          (clk),
+        .rst          (rst),
+        .full_empty   (checker_empty),
+        .dout         (dout),
+
+        .load_seed    (load_seed),
+        .seed         (seed),
+
+        .rd           (rd),
+        .out          (out),
+        .error_flag   (error_flag),
+        .error_count  (error_count),
+        .dcheck       (dcheck)
     );
 
 endmodule

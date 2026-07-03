@@ -11,43 +11,48 @@ from cocotb_tools.runner import get_runner
 
 @cocotb.test()
 async def incremental_fifo_checker_test(dut):
-    """Test incremental FIFO checker end-to-end."""
+    """Test LFSR byte-packing FIFO checker end-to-end."""
 
     dut.rst.value = 1
     dut.en.value = 0
+    dut.load_seed.value = 0
+    dut.seed.value = 0x5A
 
     clock = Clock(dut.clk, 2, unit="us")
     cocotb.start_soon(clock.start(start_high=False))
 
-    # Reset
     for _ in range(3):
         await RisingEdge(dut.clk)
 
     dut.rst.value = 0
+
+    dut.load_seed.value = 1
+    dut.seed.value = 0xA5
+    await RisingEdge(dut.clk)
+
+    dut.load_seed.value = 0
     dut.en.value = 1
 
-    # Run generator + FIFO + checker
-    for i in range(80):
+    for i in range(120):
         await RisingEdge(dut.clk)
 
-        # out should remain high once valid data starts passing
-        # ignore first few cycles because FIFO/checker pipeline needs time
-        if i > 10:
+        if i > 20:
             assert dut.out.value == 1, f"Checker failed at cycle {i}"
+            assert dut.error_flag.value == 0, f"Error flag set at cycle {i}"
 
-    # Disable generator and verify design does not falsely fail
     dut.en.value = 0
 
-    for i in range(20):
+    for _ in range(20):
         await RisingEdge(dut.clk)
 
     dut.en.value = 1
 
-    for i in range(60):
+    for i in range(120):
         await RisingEdge(dut.clk)
 
         if i > 20:
             assert dut.out.value == 1, f"Checker failed after enable resume at cycle {i}"
+            assert dut.error_flag.value == 0, f"Error flag set after resume at cycle {i}"
 
 
 def test_incremental_fifo_checker_hidden_runner():
