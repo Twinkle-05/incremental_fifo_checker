@@ -1,5 +1,3 @@
-`timescale 1us/1us
-
 module pattern_checker #(
     parameter [7:0] DEFAULT_SEED = 8'h5A
 )(
@@ -11,19 +9,21 @@ module pattern_checker #(
     input  wire        load_seed,
     input  wire [7:0]  seed,
 
-    output reg         rd,
+    output wire        rd,
     output reg         out,
     output reg         error_flag,
     output reg [15:0]  error_count,
     output reg [63:0]  dcheck
 );
 
-    reg [7:0] lfsr;
-    reg [63:0] expected_word;
+    reg [7:0]  lfsr;
+    reg        rd_d;
+    reg [63:0] expected_d;
+
+    assign rd = !full_empty;
 
     function automatic [7:0] next_lfsr(input [7:0] cur);
         begin
-            // Same polynomial as generator
             next_lfsr = {cur[6:0], cur[7] ^ cur[5] ^ cur[4] ^ cur[3]};
         end
     endfunction
@@ -59,37 +59,42 @@ module pattern_checker #(
         end
     endfunction
 
-    always @(*) begin
-        rd = !full_empty;
-    end
-
     always @(posedge clk) begin
         if (rst) begin
             lfsr        <= DEFAULT_SEED;
+            rd_d        <= 1'b0;
+            expected_d  <= 64'd0;
+            dcheck      <= 64'd0;
             out         <= 1'b1;
             error_flag  <= 1'b0;
             error_count <= 16'd0;
-            dcheck      <= 64'd0;
         end else begin
+            rd_d <= rd;
+
             if (load_seed) begin
                 lfsr        <= (seed == 8'h00) ? DEFAULT_SEED : seed;
+                rd_d        <= 1'b0;
+                expected_d  <= 64'd0;
+                dcheck      <= 64'd0;
                 out         <= 1'b1;
                 error_flag  <= 1'b0;
                 error_count <= 16'd0;
-                dcheck      <= 64'd0;
-            end else if (!full_empty) begin
-                expected_word = build_expected_word(lfsr);
-                dcheck <= expected_word;
-
-                if (dout == expected_word) begin
-                    out <= 1'b1;
-                end else begin
-                    out <= 1'b0;
-                    error_flag <= 1'b1;
-                    error_count <= error_count + 16'd1;
+            end else begin
+                if (rd) begin
+                    expected_d <= build_expected_word(lfsr);
+                    dcheck     <= build_expected_word(lfsr);
+                    lfsr       <= advance_8(lfsr);
                 end
 
-                lfsr <= advance_8(lfsr);
+                if (rd_d) begin
+                    if (dout == expected_d) begin
+                        out <= 1'b1;
+                    end else begin
+                        out <= 1'b0;
+                        error_flag <= 1'b1;
+                        error_count <= error_count + 16'd1;
+                    end
+                end
             end
         end
     end

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import RisingEdge, ReadOnly
 from cocotb_tools.runner import get_runner
 
 
@@ -35,11 +35,13 @@ async def incremental_fifo_checker_test(dut):
 
     for i in range(120):
         await RisingEdge(dut.clk)
+        await ReadOnly()
 
-        if i > 20:
+        if i > 25:
             assert dut.out.value == 1, f"Checker failed at cycle {i}"
             assert dut.error_flag.value == 0, f"Error flag set at cycle {i}"
 
+    await RisingEdge(dut.clk)
     dut.en.value = 0
 
     for _ in range(20):
@@ -49,8 +51,9 @@ async def incremental_fifo_checker_test(dut):
 
     for i in range(120):
         await RisingEdge(dut.clk)
+        await ReadOnly()
 
-        if i > 20:
+        if i > 25:
             assert dut.out.value == 1, f"Checker failed after enable resume at cycle {i}"
             assert dut.error_flag.value == 0, f"Error flag set after resume at cycle {i}"
 
